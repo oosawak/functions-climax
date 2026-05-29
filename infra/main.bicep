@@ -50,15 +50,15 @@ param location string
 param vnetEnabled bool
 
 // Chronicle configuration
-param chronicleStorage string = "file"
-param chronicleFilePath string = "./.data/chronicle.jsonl"
+param chronicleStorage string = 'file'
+param chronicleFilePath string = './.data/chronicle.jsonl'
 
 // Azure AI Language (optional; set to enable)
-param languageEndpoint string = ""
+param languageEndpoint string = ''
 @secure()
-param languageKey string = ""
-param languageProject string = ""
-param languageDeployment string = ""
+param languageKey string = ''
+param languageProject string = ''
+param languageDeployment string = ''
 param apiServiceName string = ''
 param apiUserAssignedIdentityName string = ''
 param applicationInsightsName string = ''
