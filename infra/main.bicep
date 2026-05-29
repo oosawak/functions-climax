@@ -48,6 +48,17 @@ param environmentName string
 })
 param location string
 param vnetEnabled bool
+
+// Chronicle configuration
+param chronicleStorage string = "file"
+param chronicleFilePath string = "./.data/chronicle.jsonl"
+
+// Azure AI Language (optional; set to enable)
+param languageEndpoint string = ""
+@secure()
+param languageKey string = ""
+param languageProject string = ""
+param languageDeployment string = ""
 param apiServiceName string = ''
 param apiUserAssignedIdentityName string = ''
 param applicationInsightsName string = ''
@@ -119,6 +130,12 @@ module api './app/api.bicep' = {
     identityId: apiUserAssignedIdentity.outputs.resourceId
     identityClientId: apiUserAssignedIdentity.outputs.clientId
     appSettings: {
+      CHRONICLE_STORAGE: chronicleStorage
+      CHRONICLE_FILE_PATH: chronicleFilePath
+      LANGUAGE_ENDPOINT: languageEndpoint
+      LANGUAGE_KEY: languageKey
+      LANGUAGE_PROJECT: languageProject
+      LANGUAGE_DEPLOYMENT: languageDeployment
     }
     virtualNetworkSubnetId: vnetEnabled ? serviceVirtualNetwork.outputs.appSubnetID : ''
   }

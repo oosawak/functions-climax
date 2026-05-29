@@ -197,3 +197,43 @@ When you're done working with your function app and related resources, you can u
 ```shell
 azd down
 ```
+
+---
+
+## Climax Chronicle configuration
+
+This repository is customized to run the Chronicle API routes:
+
+- `GET /api/health`
+- `GET /api/sessions`
+- `POST /api/session/update`
+- `POST /api/log/append`
+- `POST /api/nlp/analyze`
+- `GET /api/artifacts`
+
+### Required app settings (Azure)
+
+Set these as Function App *Application settings* (or via `azd env set` + `azd up`):
+
+- `CHRONICLE_STORAGE=file`
+- `CHRONICLE_FILE_PATH=./.data/chronicle.jsonl`
+
+### Azure AI Language (optional)
+
+If you set all of the following, the NLP layer will try Azure AI Language first and fall back to heuristics on errors:
+
+- `LANGUAGE_ENDPOINT`
+- `LANGUAGE_KEY`
+- `LANGUAGE_PROJECT`
+- `LANGUAGE_DEPLOYMENT`
+
+Example (using azd env vars):
+
+```bash
+azd env set CHRONICLE_STORAGE file
+azd env set CHRONICLE_FILE_PATH ./.data/chronicle.jsonl
+azd env set LANGUAGE_ENDPOINT "https://<your-resource>.cognitiveservices.azure.com/"
+azd env set LANGUAGE_KEY "<secret>"
+azd env set LANGUAGE_PROJECT "<project>"
+azd env set LANGUAGE_DEPLOYMENT "<deployment>"
+```

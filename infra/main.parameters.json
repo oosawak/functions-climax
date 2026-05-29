@@ -13,6 +13,26 @@
     },
     "vnetEnabled": {
       "value": "${VNET_ENABLED}"
+    },
+
+    "chronicleStorage": {
+      "value": "${CHRONICLE_STORAGE}"
+    },
+    "chronicleFilePath": {
+      "value": "${CHRONICLE_FILE_PATH}"
+    },
+
+    "languageEndpoint": {
+      "value": "${LANGUAGE_ENDPOINT}"
+    },
+    "languageKey": {
+      "value": "${LANGUAGE_KEY}"
+    },
+    "languageProject": {
+      "value": "${LANGUAGE_PROJECT}"
+    },
+    "languageDeployment": {
+      "value": "${LANGUAGE_DEPLOYMENT}"
     }
   }
 }

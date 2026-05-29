@@ -1,7 +1,15 @@
 {
-    "IsEncrypted": false,
-    "Values": {
-        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-        "FUNCTIONS_WORKER_RUNTIME": "python"
-    }
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+
+    "CHRONICLE_STORAGE": "file",
+    "CHRONICLE_FILE_PATH": "./.data/chronicle.jsonl",
+
+    "LANGUAGE_ENDPOINT": "",
+    "LANGUAGE_KEY": "",
+    "LANGUAGE_PROJECT": "",
+    "LANGUAGE_DEPLOYMENT": ""
+  }
 }

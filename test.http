@@ -1,15 +1,10 @@
-GET http://localhost:7071/api/httpget HTTP/1.1
+### health
+GET http://localhost:7071/api/health
 
-###
-
-GET http://localhost:7071/api/httpget?name=World HTTP/1.1
-
-###
-
-POST http://localhost:7071/api/httppost
-content-type: application/json
+### nlp_analyze
+POST http://localhost:7071/api/nlp/analyze
+Content-Type: application/json
 
 {
-    "name": "Awesome Developer",
-    "age": 25
+  "text": "昨日の続きやって"
 }
