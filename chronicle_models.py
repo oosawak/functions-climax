@@ -25,6 +25,22 @@ def optional_str(payload: dict[str, Any], key: str) -> str | None:
     return value
 
 
+def optional_int(payload: dict[str, Any], key: str) -> int | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError(f"invalid {key}")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip():
+        try:
+            return int(value.strip())
+        except ValueError as e:
+            raise ValueError(f"invalid {key}") from e
+    raise ValueError(f"invalid {key}")
+
+
 @dataclass(frozen=True)
 class SessionUpdate:
     server_id: str
@@ -64,6 +80,10 @@ class LogAppend:
     session_id: str
     timestamp: str
     log: str
+    topic: str | None
+    command: str | None
+    exit_code: int | None
+    cwd: str | None
 
     @staticmethod
     def from_payload(payload: dict[str, Any]) -> "LogAppend":
@@ -71,7 +91,20 @@ class LogAppend:
         session_id = require_str(payload, "session_id")
         timestamp = optional_str(payload, "timestamp") or utc_now_iso()
         log = require_str(payload, "log")
-        return LogAppend(server_id=server_id, session_id=session_id, timestamp=timestamp, log=log)
+        topic = optional_str(payload, "topic")
+        command = optional_str(payload, "command")
+        exit_code = optional_int(payload, "exit_code")
+        cwd = optional_str(payload, "cwd")
+        return LogAppend(
+            server_id=server_id,
+            session_id=session_id,
+            timestamp=timestamp,
+            log=log,
+            topic=topic,
+            command=command,
+            exit_code=exit_code,
+            cwd=cwd,
+        )
 
 
 @dataclass(frozen=True)
