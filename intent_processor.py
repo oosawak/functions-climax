@@ -106,6 +106,20 @@ def interpret_with_azure_language(text: str) -> IntentResult:
             if isinstance(name, str) and name and val is not None:
                 entities.setdefault(name, val)
 
+    # Normalize common entity fields (e.g., query/path tokens)
+    for key in ("query", "path"):
+        raw_val = entities.get(key)
+        if not isinstance(raw_val, str) or not raw_val.strip():
+            continue
+        raw_val = raw_val.strip()
+        # Prefer leading ASCII-ish token for file paths / identifiers.
+        m = re.match(r"^([A-Za-z0-9_./-]{2,})", raw_val)
+        if m:
+            entities[key] = m.group(1)
+        else:
+            # Fallback: strip common trailing particles/verbs.
+            entities[key] = re.sub(r"(を開いて|開いて|を検索して|検索して|探して|を探して)\s*$", "", raw_val)
+
     # Normalize common entity fields (e.g., session names)
     session_val = entities.get("session")
     if isinstance(session_val, str) and session_val:
@@ -155,6 +169,26 @@ def build_english_prompt(intent_result: IntentResult) -> str:
         session = ent.get("session") if isinstance(ent, dict) else None
         session = session.strip() if isinstance(session, str) and session.strip() else "unity-dev"
         return f"Open the Unity development session named '{session}'."
+
+    if intent == "search_in_repo":
+        query = ent.get("query") if isinstance(ent, dict) else None
+        query = query.strip() if isinstance(query, str) and query.strip() else None
+        if query:
+            return f"Search the repository for occurrences of '{query}'. Use ripgrep (rg)."
+        return "Search the repository for the user-requested keyword. Use ripgrep (rg)."
+
+    if intent == "open_file":
+        path = ent.get("path") if isinstance(ent, dict) else None
+        path = path.strip() if isinstance(path, str) and path.strip() else None
+        if path:
+            return f"Open and inspect the file at path '{path}'."
+        return "Open and inspect the file the user mentioned."
+
+    if intent == "run_checks":
+        return "Run the project's local checks (bash run_checks.sh) and report results."
+
+    if intent == "summarize_diff":
+        return "Summarize the current git diff (changes) concisely."
 
     return "The user's intent is unclear. Ask one concise clarifying question in Japanese about what they want to do next, and wait for their answer."
 
