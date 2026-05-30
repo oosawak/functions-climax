@@ -46,7 +46,7 @@ def interpret_with_azure_language(text: str) -> IntentResult:
         raise RuntimeError("Azure AI Language env vars are not set")
 
     endpoint = endpoint.rstrip("/")
-    url = f"{endpoint}/language/:analyze-conversations?api-version=2023-04-15-preview"
+    url = f"{endpoint}/language/:analyze-conversations?api-version=2024-11-01"
 
     payload = {
         "kind": "Conversation",
