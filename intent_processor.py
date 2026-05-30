@@ -146,7 +146,7 @@ def build_english_prompt(intent_result: IntentResult) -> str:
         session = session.strip() if isinstance(session, str) and session.strip() else "unity-dev"
         return f"Open the Unity development session named '{session}'."
 
-    return "Perform the requested task based on the user's previous instructions."
+    return "The user's intent is unclear. Ask one concise clarifying question in Japanese about what they want to do next, and wait for their answer."
 
 
 def build_final_prompt_for_llm(english_prompt: str) -> str:
