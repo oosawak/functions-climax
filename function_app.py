@@ -52,6 +52,15 @@ def _optional_int_query(req: func.HttpRequest, key: str) -> int | None:
         raise ValueError(f"invalid int query param: {key}") from e
 
 
+
+
+
+def _debug_error_payload(e: Exception) -> dict:
+    # Turn on verbose errors only when explicitly enabled.
+    debug = (os.getenv("CHRONICLE_DEBUG_ERRORS") or "").strip().lower() in {"1", "true", "yes"}
+    if not debug:
+        return {"ok": False, "error": "internal error"}
+    return {"ok": False, "error": str(e), "type": type(e).__name__}
 @app.route(route="health", methods=["GET"])
 def health(req: func.HttpRequest) -> func.HttpResponse:
     kind = (os.getenv("CHRONICLE_STORAGE") or "file").strip().lower()
@@ -60,8 +69,11 @@ def health(req: func.HttpRequest) -> func.HttpResponse:
 
 @app.route(route="sessions", methods=["GET"])
 def sessions(req: func.HttpRequest) -> func.HttpResponse:
-    storage = get_storage()
-    return _json_response({"items": storage.list_sessions()})
+    try:
+        storage = get_storage()
+        return _json_response({"items": storage.list_sessions()})
+    except Exception as e:
+        return _json_response(_debug_error_payload(e), status=500)
 
 
 @app.route(route="session/get", methods=["GET"])
@@ -72,18 +84,24 @@ def session_get(req: func.HttpRequest) -> func.HttpResponse:
     except ValueError as e:
         return _json_response({"ok": False, "error": str(e)}, status=400)
 
-    storage = get_storage()
-    item = storage.get_session(server_id=server_id, session_id=session_id)
-    return _json_response({"ok": True, "item": item})
+    try:
+        storage = get_storage()
+        item = storage.get_session(server_id=server_id, session_id=session_id)
+        return _json_response({"ok": True, "item": item})
+    except Exception as e:
+        return _json_response(_debug_error_payload(e), status=500)
 
 
 @app.route(route="session/update", methods=["POST"])
 def session_update(req: func.HttpRequest) -> func.HttpResponse:
-    storage = get_storage()
-    payload = _parse_json(req)
-    update = SessionUpdate.from_payload(payload)
-    saved = storage.upsert_session(update)
-    return _json_response({"ok": True, "item": saved})
+    try:
+        storage = get_storage()
+        payload = _parse_json(req)
+        update = SessionUpdate.from_payload(payload)
+        saved = storage.upsert_session(update)
+        return _json_response({"ok": True, "item": saved})
+    except Exception as e:
+        return _json_response(_debug_error_payload(e), status=500)
 
 
 @app.route(route="logs", methods=["GET"])
@@ -98,8 +116,9 @@ def logs(req: func.HttpRequest) -> func.HttpResponse:
     except ValueError as e:
         return _json_response({"ok": False, "error": str(e)}, status=400)
 
-    storage = get_storage()
-    items = storage.list_logs(
+    try:
+        storage = get_storage()
+        items = storage.list_logs(
         server_id=server_id,
         session_id=session_id,
         limit=limit or 200,
@@ -107,16 +126,21 @@ def logs(req: func.HttpRequest) -> func.HttpResponse:
         until=until,
         topic=topic,
     )
-    return _json_response({"ok": True, "items": items})
+        return _json_response({"ok": True, "items": items})
+    except Exception as e:
+        return _json_response(_debug_error_payload(e), status=500)
 
 
 @app.route(route="log/append", methods=["POST"])
 def log_append(req: func.HttpRequest) -> func.HttpResponse:
-    storage = get_storage()
-    payload = _parse_json(req)
-    item = LogAppend.from_payload(payload)
-    saved = storage.append_log(item)
-    return _json_response({"ok": True, "item": saved})
+    try:
+        storage = get_storage()
+        payload = _parse_json(req)
+        item = LogAppend.from_payload(payload)
+        saved = storage.append_log(item)
+        return _json_response({"ok": True, "item": saved})
+    except Exception as e:
+        return _json_response(_debug_error_payload(e), status=500)
 
 
 @app.route(route="nlp/analyze", methods=["POST"])
