@@ -237,3 +237,35 @@ azd env set LANGUAGE_KEY "<secret>"
 azd env set LANGUAGE_PROJECT "<project>"
 azd env set LANGUAGE_DEPLOYMENT "<deployment>"
 ```
+
+---
+
+## Local run (scripts)
+
+```bash
+bash scripts/run_local.sh
+```
+
+In another terminal:
+
+```bash
+bash scripts/check_http.sh
+```
+
+## Azure app settings (from .env)
+
+Create `.env` (do not commit) with at least:
+
+- `AZ_RESOURCE_GROUP`
+- `AZ_FUNCTION_APP`
+
+Optionally include:
+
+- `CHRONICLE_STORAGE`, `CHRONICLE_FILE_PATH`
+- `LANGUAGE_ENDPOINT`, `LANGUAGE_KEY`, `LANGUAGE_PROJECT`, `LANGUAGE_DEPLOYMENT`
+
+Apply:
+
+```bash
+bash scripts/set_appsettings_from_env.sh
+```
