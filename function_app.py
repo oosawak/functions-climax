@@ -94,6 +94,7 @@ def logs(req: func.HttpRequest) -> func.HttpResponse:
         limit = _optional_int_query(req, "limit")
         since = _optional_query(req, "since")
         until = _optional_query(req, "until")
+        topic = _optional_query(req, "topic")
     except ValueError as e:
         return _json_response({"ok": False, "error": str(e)}, status=400)
 
@@ -104,6 +105,7 @@ def logs(req: func.HttpRequest) -> func.HttpResponse:
         limit=limit or 200,
         since=since,
         until=until,
+        topic=topic,
     )
     return _json_response({"ok": True, "items": items})
 

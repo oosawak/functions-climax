@@ -32,6 +32,7 @@ class ChronicleStorage:
         limit: int = 200,
         since: str | None = None,
         until: str | None = None,
+        topic: str | None = None,
     ) -> list[dict[str, Any]]:
         raise NotImplementedError
 
@@ -113,6 +114,7 @@ class FileStorage(ChronicleStorage):
         limit: int = 200,
         since: str | None = None,
         until: str | None = None,
+        topic: str | None = None,
     ) -> list[dict[str, Any]]:
         if limit < 1:
             return []
@@ -134,6 +136,8 @@ class FileStorage(ChronicleStorage):
                 if item.get("type") != "log":
                     continue
                 if item.get("server_id") != server_id or item.get("session_id") != session_id:
+                    continue
+                if topic and item.get("topic") != topic:
                     continue
                 ts = str(item.get("timestamp") or "")
                 if since and ts and ts < since:
@@ -191,6 +195,7 @@ class CosmosStorage(ChronicleStorage):
         limit: int = 200,
         since: str | None = None,
         until: str | None = None,
+        topic: str | None = None,
     ) -> list[dict[str, Any]]:
         if limit < 1:
             return []
@@ -206,6 +211,9 @@ class CosmosStorage(ChronicleStorage):
         if until:
             where.append("c.timestamp <= @until")
             params.append({"name": "@until", "value": until})
+        if topic:
+            where.append("c.topic = @topic")
+            params.append({"name": "@topic", "value": topic})
 
         query = (
             "SELECT TOP @limit * FROM c WHERE "
