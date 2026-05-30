@@ -18,7 +18,21 @@ class ChronicleStorage:
     def append_log(self, item: LogAppend) -> dict[str, Any]:
         raise NotImplementedError
 
+    def get_session(self, server_id: str, session_id: str) -> dict[str, Any] | None:
+        raise NotImplementedError
+
     def list_sessions(self) -> list[dict[str, Any]]:
+        raise NotImplementedError
+
+    def list_logs(
+        self,
+        server_id: str,
+        session_id: str,
+        *,
+        limit: int = 200,
+        since: str | None = None,
+        until: str | None = None,
+    ) -> list[dict[str, Any]]:
         raise NotImplementedError
 
     def list_artifacts(self) -> list[dict[str, Any]]:
@@ -52,6 +66,27 @@ class FileStorage(ChronicleStorage):
         self._append(record)
         return record
 
+    def get_session(self, server_id: str, session_id: str) -> dict[str, Any] | None:
+        if not self.path.exists():
+            return None
+        target_id = f"session-{server_id}-{session_id}"
+        latest: dict[str, Any] | None = None
+        with self.path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    item = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if item.get("type") != "session":
+                    continue
+                if item.get("id") != target_id:
+                    continue
+                latest = item
+        return latest
+
     def list_sessions(self) -> list[dict[str, Any]]:
         if not self.path.exists():
             return []
@@ -69,6 +104,46 @@ class FileStorage(ChronicleStorage):
                     continue
                 sessions[item["id"]] = item
         return sorted(sessions.values(), key=lambda x: x.get("updated_at", ""), reverse=True)
+
+    def list_logs(
+        self,
+        server_id: str,
+        session_id: str,
+        *,
+        limit: int = 200,
+        since: str | None = None,
+        until: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if limit < 1:
+            return []
+        if limit > 2000:
+            limit = 2000
+        if not self.path.exists():
+            return []
+
+        items: list[dict[str, Any]] = []
+        with self.path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    item = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if item.get("type") != "log":
+                    continue
+                if item.get("server_id") != server_id or item.get("session_id") != session_id:
+                    continue
+                ts = str(item.get("timestamp") or "")
+                if since and ts and ts < since:
+                    continue
+                if until and ts and ts > until:
+                    continue
+                items.append(item)
+
+        items.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        return items[:limit]
 
 
 class CosmosStorage(ChronicleStorage):
@@ -96,9 +171,56 @@ class CosmosStorage(ChronicleStorage):
         self.container.upsert_item(record)
         return record
 
+    def get_session(self, server_id: str, session_id: str) -> dict[str, Any] | None:
+        target_id = f"session-{server_id}-{session_id}"
+        pk = f"session:{server_id}"
+        try:
+            return self.container.read_item(item=target_id, partition_key=pk)
+        except Exception:
+            return None
+
     def list_sessions(self) -> list[dict[str, Any]]:
         query = "SELECT * FROM c WHERE c.type = 'session' ORDER BY c.updated_at DESC"
         return list(self.container.query_items(query=query, enable_cross_partition_query=True))
+
+    def list_logs(
+        self,
+        server_id: str,
+        session_id: str,
+        *,
+        limit: int = 200,
+        since: str | None = None,
+        until: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if limit < 1:
+            return []
+        if limit > 2000:
+            limit = 2000
+
+        pk = f"log:{server_id}:{session_id}"
+        where = ["c.type = 'log'", "c.pk = @pk"]
+        params: list[dict[str, Any]] = [{"name": "@pk", "value": pk}]
+        if since:
+            where.append("c.timestamp >= @since")
+            params.append({"name": "@since", "value": since})
+        if until:
+            where.append("c.timestamp <= @until")
+            params.append({"name": "@until", "value": until})
+
+        query = (
+            "SELECT TOP @limit * FROM c WHERE "
+            + " AND ".join(where)
+            + " ORDER BY c.timestamp DESC"
+        )
+        params.insert(0, {"name": "@limit", "value": limit})
+
+        return list(
+            self.container.query_items(
+                query=query,
+                parameters=params,
+                enable_cross_partition_query=True,
+            )
+        )
 
 
 def get_storage() -> ChronicleStorage:
@@ -118,4 +240,3 @@ def get_storage() -> ChronicleStorage:
 
 def health_payload(storage_kind: str) -> dict[str, Any]:
     return {"ok": True, "storage": storage_kind, "timestamp": utc_now_iso()}
-

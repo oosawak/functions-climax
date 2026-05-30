@@ -27,6 +27,31 @@ def _parse_json(req: func.HttpRequest) -> dict:
         raise ValueError("invalid json") from e
 
 
+def _require_query(req: func.HttpRequest, key: str) -> str:
+    value = (req.params.get(key) or "").strip()
+    if not value:
+        raise ValueError(f"missing query param: {key}")
+    return value
+
+
+def _optional_query(req: func.HttpRequest, key: str) -> str | None:
+    value = req.params.get(key)
+    if value is None:
+        return None
+    value = value.strip()
+    return value or None
+
+
+def _optional_int_query(req: func.HttpRequest, key: str) -> int | None:
+    raw = _optional_query(req, key)
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except ValueError as e:
+        raise ValueError(f"invalid int query param: {key}") from e
+
+
 @app.route(route="health", methods=["GET"])
 def health(req: func.HttpRequest) -> func.HttpResponse:
     kind = (os.getenv("CHRONICLE_STORAGE") or "file").strip().lower()
@@ -39,6 +64,19 @@ def sessions(req: func.HttpRequest) -> func.HttpResponse:
     return _json_response({"items": storage.list_sessions()})
 
 
+@app.route(route="session/get", methods=["GET"])
+def session_get(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        server_id = _require_query(req, "server_id")
+        session_id = _require_query(req, "session_id")
+    except ValueError as e:
+        return _json_response({"ok": False, "error": str(e)}, status=400)
+
+    storage = get_storage()
+    item = storage.get_session(server_id=server_id, session_id=session_id)
+    return _json_response({"ok": True, "item": item})
+
+
 @app.route(route="session/update", methods=["POST"])
 def session_update(req: func.HttpRequest) -> func.HttpResponse:
     storage = get_storage()
@@ -46,6 +84,28 @@ def session_update(req: func.HttpRequest) -> func.HttpResponse:
     update = SessionUpdate.from_payload(payload)
     saved = storage.upsert_session(update)
     return _json_response({"ok": True, "item": saved})
+
+
+@app.route(route="logs", methods=["GET"])
+def logs(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        server_id = _require_query(req, "server_id")
+        session_id = _require_query(req, "session_id")
+        limit = _optional_int_query(req, "limit")
+        since = _optional_query(req, "since")
+        until = _optional_query(req, "until")
+    except ValueError as e:
+        return _json_response({"ok": False, "error": str(e)}, status=400)
+
+    storage = get_storage()
+    items = storage.list_logs(
+        server_id=server_id,
+        session_id=session_id,
+        limit=limit or 200,
+        since=since,
+        until=until,
+    )
+    return _json_response({"ok": True, "items": items})
 
 
 @app.route(route="log/append", methods=["POST"])
