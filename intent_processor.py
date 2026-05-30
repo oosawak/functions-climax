@@ -106,6 +106,16 @@ def interpret_with_azure_language(text: str) -> IntentResult:
             if isinstance(name, str) and name and val is not None:
                 entities.setdefault(name, val)
 
+    # Normalize common entity fields (e.g., session names)
+    session_val = entities.get("session")
+    if isinstance(session_val, str) and session_val:
+        session_val = session_val.strip()
+        m = re.match(r"^([A-Za-z0-9_./-]{2,})", session_val)
+        if m:
+            entities["session"] = m.group(1)
+        else:
+            entities["session"] = re.sub(r"(を開いて|開いて|の続き|続き|再開)\s*$", "", session_val)
+
     return IntentResult(intent=intent, entities=entities, provider="azure-ai-language")
 
 
